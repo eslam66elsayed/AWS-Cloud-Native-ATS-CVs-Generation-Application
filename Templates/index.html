@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مولّد السيرة الذاتية</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 30px 16px; }
+  .container { max-width: 700px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  p.sub { color: #666; margin-top: 0; margin-bottom: 24px; }
+  label { display: block; font-weight: 600; margin: 16px 0 5px; font-size: 14px; }
+  input, textarea { width: 100%; padding: 10px 12px; border: 1px solid #d6d8dc; border-radius: 8px; font-size: 14px; font-family: inherit; }
+  textarea { resize: vertical; min-height: 80px; }
+  button { margin-top: 20px; width: 100%; padding: 13px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  button:disabled { background: #9ca3af; cursor: not-allowed; }
+  #result { margin-top: 16px; padding: 14px; border-radius: 8px; display: none; font-size: 14px; }
+  #result.ok  { background: #ecfdf5; border: 1px solid #6ee7b7; display: block; }
+  #result.err { background: #fef2f2; border: 1px solid #fca5a5; display: block; }
+  hr { border: none; border-top: 1px solid #eee; margin: 28px 0; }
+  .bar { height: 10px; border-radius: 5px; background: #e5e7eb; overflow: hidden; margin-top: 8px; }
+  .fill { height: 100%; background: linear-gradient(90deg,#2563eb,#22c55e); }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>مولّد السيرة الذاتية المتوافقة مع ATS</h1>
+  <p class="sub">إملأ بياناتك واحصل على CV جاهز، ثم قارنه بأي وظيفة</p>
+  <form id="cvForm">
+    <label>الاسم الكامل</label>
+    <input type="text" name="full_name" required>
+    <label>البريد الإلكتروني</label>
+    <input type="email" name="email" required>
+    <label>رقم الهاتف</label>
+    <input type="text" name="phone" required>
+    <label>نبذة مختصرة</label>
+    <textarea name="summary" required></textarea>
+    <label>المهارات (افصل بفاصلة)</label>
+    <textarea name="skills" required></textarea>
+    <label>الخبرات العملية</label>
+    <textarea name="experience" required></textarea>
+    <label>التعليم</label>
+    <textarea name="education" required></textarea>
+    <button type="submit" id="genBtn">توليد السيرة الذاتية</button>
+  </form>
+  <div id="result"></div>
+  <div id="analyzerSection" style="display:none">
+    <hr>
+    <label>الصق وصف الوظيفة هنا</label>
+    <textarea id="jdText"></textarea>
+    <button id="analyzeBtn">قارن مع الوظيفة</button>
+    <div id="analyzeResult" style="margin-top:14px;"></div>
+  </div>
+</div>
+<script>
+let cvId = null;
+document.getElementById('cvForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; btn.textContent = 'جاري التوليد...';
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  try {
+    const r = await fetch('/generate-cv', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'خطأ');
+    cvId = j.cv_id;
+    document.getElementById('result').className = 'ok';
+    document.getElementById('result').innerHTML = 'تم التوليد ✅ &nbsp; <a href="'+j.download_url+'" target="_blank">تحميل السيرة الذاتية</a>';
+    document.getElementById('analyzerSection').style.display = 'block';
+  } catch(err) {
+    document.getElementById('result').className = 'err';
+    document.getElementById('result').textContent = 'خطأ: ' + err.message;
+  }
+  btn.disabled = false; btn.textContent = 'توليد السيرة الذاتية';
+});
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+  const jd = document.getElementById('jdText').value;
+  const btn = document.getElementById('analyzeBtn');
+  if (!jd.trim()) { alert('الصق وصف الوظيفة الأول'); return; }
+  btn.disabled = true; btn.textContent = 'جاري التحليل...';
+  try {
+    const r = await fetch('/analyze-cv', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cv_id:cvId, job_description:jd})});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'خطأ');
+    document.getElementById('analyzeResult').innerHTML =
+      '<p><strong>نسبة التوافق: '+j.match_score+'%</strong></p>'+
+      '<div class="bar"><div class="fill" style="width:'+j.match_score+'%"></div></div>'+
+      '<p><strong>كلمات ناقصة:</strong> '+(j.missing_keywords.join('، ')||'لا يوجد')+'</p>'+
+      '<p><strong>اقتراح:</strong> '+j.suggestions+'</p>';
+  } catch(err) {
+    document.getElementById('analyzeResult').textContent = 'خطأ: ' + err.message;
+  }
+  btn.disabled = false; btn.textContent = 'قارن مع الوظيفة';
+});
+</script>
+</body>
+</html>
