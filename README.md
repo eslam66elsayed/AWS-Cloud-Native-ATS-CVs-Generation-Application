@@ -75,6 +75,14 @@ ats-cv-generator/
 - **100% Free Tier** — Runs within AWS Free Tier limits for personal/learning use
 
 
+## Live Test Result
+
+Successfully generated a CV, stored it in S3, and ran the JD analyzer end-to-end — returned a real match score with missing-keyword suggestions against an actual job description.
+
+<p align="center">
+  <img src="images/Screenshot 2026-09-01 045823.png" alt="Home Page" width="45%" />
+  <img src="images/Screenshot 2026-09-01 055621.png" alt="CV Generation" width="45%" />
+</p>
 
 
 ## 🛠️ Deployment Guide
